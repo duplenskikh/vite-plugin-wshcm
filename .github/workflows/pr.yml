@@ -16,4 +16,5 @@ jobs:
       - run: npm test
       - name: Report LCOV
         uses: zgosalvez/github-actions-report-lcov@v4.1.18
-        coverage-files: lcov.info
+        with:
+          coverage-files: lcov.info
