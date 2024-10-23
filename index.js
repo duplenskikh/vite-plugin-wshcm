@@ -13,7 +13,6 @@ const extsMapping = new Map([
 const CWT_MARKER = '/// <template type="cwt" />';
 
 function wrap(sourceCode) {
-  console.log('MARKER', sourceCode.indexOf(CWT_MARKER));
   if (sourceCode.indexOf(CWT_MARKER) !== -1) {
     sourceCode = `<%\n${sourceCode}\n%>\n`;
   }
@@ -21,7 +20,7 @@ function wrap(sourceCode) {
   return `\ufeff${sourceCode}`;
 }
 
-function preTransform(sourceCode) {
+function prepare(sourceCode) {
   function visitor(node) {
     if (ts.isExportDeclaration(node) || ts.isImportDeclaration(node)) {
       ts.addSyntheticLeadingComment(node, ts.SyntaxKind.MissingDeclaration, '', false);
@@ -58,7 +57,7 @@ function preTransform(sourceCode) {
   return printer.printFile(result.transformed[0]);
 }
 
-function transform(sourceCode) {
+function pare(sourceCode) {
   const { outputText } = ts.transpileModule(
     sourceCode,
     {
@@ -69,7 +68,7 @@ function transform(sourceCode) {
   return outputText;
 }
 
-function postTransform(sourceCode) {
+function afterpare(sourceCode) {
   function visitor(node) {
     if (ts.isForInStatement(node)) {
       if (ts.isVariableDeclarationList(node.initializer) && node.initializer.declarations.length > 0) {
@@ -104,39 +103,42 @@ function postTransform(sourceCode) {
   return printer.printFile(result.transformed[0]);
 }
 
+async function transmute(ctx, outputPathParsed) {
+  if (!existsSync(outputPathParsed.dir)) {
+    mkdirSync(outputPathParsed.dir, { recursive: true });
+  }
+
+  let sourceCode = await ctx.read();
+
+  if (extsToTransform.indexOf(extname(ctx.file)) !== -1) {
+    sourceCode = prepare(sourceCode);
+    sourceCode = pare(sourceCode);
+    sourceCode = afterpare(sourceCode);
+    sourceCode = wrap(sourceCode);
+  }
+
+  writeFileSync(
+    join(outputPathParsed.dir, `${outputPathParsed.name}${extsMapping.get(outputPathParsed.ext) ?? outputPathParsed.ext}`),
+    sourceCode
+  );
+}
+
 export default function wshcmBuilder(config) {
   return {
     name: PLUGIN_NAME,
     async handleHotUpdate(ctx) {
+      const relativePath = relative(ctx.server.config.root, ctx.file);
+      const outputRelative = relative(ctx.server.config.root, config.output);
+
+      if (relativePath.startsWith(outputRelative)) {
+        return;
+      }
+
+      const outputPath = join(config.output, relativePath);
+      const outputPathParsed = parse(outputPath);
+
       try {
-        const relativePath = relative(ctx.server.config.root, ctx.file);
-        const outputRelative = relative(ctx.server.config.root, config.output);
-
-        if (relativePath.startsWith(outputRelative)) {
-          return;
-        }
-
-        const outputPath = join(config.output, relativePath);
-        const outputPathParsed = parse(outputPath);
-
-        if (!existsSync(outputPathParsed.dir)) {
-          mkdirSync(outputPathParsed.dir, { recursive: true });
-        }
-
-        let sourceCode = await ctx.read();
-
-        if (extsToTransform.indexOf(extname(ctx.file)) !== -1) {
-          sourceCode = preTransform(sourceCode);
-          sourceCode = transform(sourceCode);
-          sourceCode = postTransform(sourceCode);
-          sourceCode = wrap(sourceCode);
-        }
-
-        writeFileSync(
-          join(outputPathParsed.dir, `${outputPathParsed.name}${extsMapping.get(outputPathParsed.ext) ?? outputPathParsed.ext}`),
-          sourceCode
-        );
-
+        transmute(ctx, outputPathParsed);
         console.log(`✅ ${new Date().toLocaleString()} File "${basename(ctx.file)}" successfully transformed and saved in the "${outputRelative}" folder`);
       } catch (error) {
         console.error(`🛑 Error occurred in plugin ${PLUGIN_NAME}\n`, error);
