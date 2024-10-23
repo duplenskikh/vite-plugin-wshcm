@@ -1,0 +1,6 @@
+*.d.ts
+*.test.js
+tsconfig.json
+*.md
+lcov.info
+!.npmignore
