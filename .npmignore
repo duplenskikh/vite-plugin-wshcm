@@ -3,4 +3,5 @@
 tsconfig.json
 *.md
 lcov.info
-!.npmignore
+.github/
+.npmignore
