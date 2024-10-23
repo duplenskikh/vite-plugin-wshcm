@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test --experimental-test-coverage"
   },
   "keywords": [
     "vite-plugin",
