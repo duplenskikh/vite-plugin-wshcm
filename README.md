@@ -29,7 +29,7 @@ export default {
 
 ## Обратная связь
 
-TBD
+https://github.com/duplenskikh/vite-plugin-wshcm/issues
 
 ## License
 
