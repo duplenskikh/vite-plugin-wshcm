@@ -2,8 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { parse, join, relative, basename, extname } from 'path';
 import ts from 'typescript';
 
-const openBracketRegex = /\/\/\/ (<%)/;
-const closeBracketRegex = /\/\/\/ (%>)/;
+const PLUGIN_NAME = 'vite-plugin-wshcm-builder';
 const extsToTransform = ['.tsx', '.ts', '.js', '.jsx', '.bs'];
 const extsMapping = new Map([
   ['.tsx', '.js'],
@@ -11,10 +10,12 @@ const extsMapping = new Map([
   ['.jsx', '.js']
 ]);
 
+const CWT_MARKER = '/// <template type="cwt" />';
+
 function wrap(sourceCode) {
-  console.log(openBracketRegex.test(sourceCode), closeBracketRegex.test(sourceCode));
-  if (openBracketRegex.test(sourceCode) && closeBracketRegex.test(sourceCode)) {
-    sourceCode = sourceCode.replace(openBracketRegex, "$1").replace(closeBracketRegex, "$1");
+  console.log('MARKER', sourceCode.indexOf(CWT_MARKER));
+  if (sourceCode.indexOf(CWT_MARKER) !== -1) {
+    sourceCode = `<%\n${sourceCode}\n%>\n`;
   }
 
   return `\ufeff${sourceCode}`;
@@ -103,9 +104,9 @@ function postTransform(sourceCode) {
   return printer.printFile(result.transformed[0]);
 }
 
-export default function webtutor(config) {
+export default function wshcmBuilder(config) {
   return {
-    name: 'vite-plugin-webtutor',
+    name: PLUGIN_NAME,
     async handleHotUpdate(ctx) {
       try {
         const relativePath = relative(ctx.server.config.root, ctx.file);
@@ -138,7 +139,7 @@ export default function webtutor(config) {
 
         console.log(`✅ ${new Date().toLocaleString()} File "${basename(ctx.file)}" successfully transformed and saved in the "${outputRelative}" folder`);
       } catch (error) {
-        console.error('🛑 Error occurred', error);
+        console.error(`🛑 Error occurred in plugin ${PLUGIN_NAME}\n`, error);
       }
     },
   };

@@ -1,9 +1,9 @@
-interface WebTutorConfiguration {
+interface WshcmConfiguration {
   output: string;
 }
 
-declare module 'vite-plugin-webtutor' {
-  export function webtutor(config: WebTutorConfiguration): {
+declare module 'vite-plugin-wshcm-builder' {
+  export function wshcmBuilder(config: WshcmConfiguration): {
     name: string;
     handleHotUpdate(): void;
   };
