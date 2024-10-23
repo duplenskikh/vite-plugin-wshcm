@@ -30,3 +30,7 @@ export default {
 ## Обратная связь
 
 TBD
+
+## License
+
+MIT

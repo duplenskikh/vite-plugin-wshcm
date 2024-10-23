@@ -11,9 +11,9 @@
     "wshcm",
     "webtutor"
   ],
-  "author": "",
+  "author": "duplenskikh",
   "license": "ISC",
-  "description": "",
+  "description": "Vite плагин для транспиляции TypeScript кода в формат WSHCM",
   "dependencies": {
     "typescript": "^5.6.3"
   },
