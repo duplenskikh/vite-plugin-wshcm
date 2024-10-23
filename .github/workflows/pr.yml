@@ -18,3 +18,6 @@ jobs:
         uses: zgosalvez/github-actions-report-lcov@v4.1.18
         with:
           coverage-files: lcov.info
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true
