@@ -1,9 +1,5 @@
-interface WshcmConfiguration {
-  output: string;
-}
-
-declare module 'vite-plugin-wshcm-builder' {
-  export function wshcmBuilder(config: WshcmConfiguration): {
+declare module 'vite-plugin-wshcm' {
+  export function wshcm(config: { output: string }): {
     name: string;
     handleHotUpdate(): void;
   };

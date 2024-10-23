@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import { addbom, wrap, prepare, pare, afterpare, transmute } from './index.js';
 import assert from 'node:assert';
 
-describe('vite-plugin-wshcm-builder suite', () => {
+describe('vite-plugin-wshcm suite', () => {
   const TEMPLATE_DEFAULT_VALUES = `/// <template type="cwt" />
 function sumWithC(a: number = 1, b: number = 10) {
   const c = a + b;

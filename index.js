@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { parse, join, relative, basename, extname } from 'path';
 import ts from 'typescript';
 
-const PLUGIN_NAME = 'vite-plugin-wshcm-builder';
+const PLUGIN_NAME = 'vite-plugin-wshcm';
 const EXTS_TO_TRANSFORM = ['.tsx', '.ts', '.js', '.jsx', '.bs'];
 const EXTS_MAPPING = new Map([
   ['.tsx', '.js'],
@@ -111,7 +111,7 @@ export async function transmute(ctx) {
   return code;
 }
 
-export default async function wshcmBuilder(config) {
+export default async function wshcm(config) {
   return {
     name: PLUGIN_NAME,
     async handleHotUpdate(ctx) {

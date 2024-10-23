@@ -1,5 +1,5 @@
 {
-  "name": "vite-plugin-wshcm-builder",
+  "name": "vite-plugin-wshcm",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
@@ -9,7 +9,6 @@
   "keywords": [
     "vite-plugin",
     "wshcm",
-    "wschm-builder",
     "webtutor"
   ],
   "author": "",
