@@ -3,24 +3,34 @@ import { parse, join, relative, basename, extname } from 'path';
 import ts from 'typescript';
 
 const PLUGIN_NAME = 'vite-plugin-wshcm-builder';
-const extsToTransform = ['.tsx', '.ts', '.js', '.jsx', '.bs'];
-const extsMapping = new Map([
+const EXTS_TO_TRANSFORM = ['.tsx', '.ts', '.js', '.jsx', '.bs'];
+const EXTS_MAPPING = new Map([
   ['.tsx', '.js'],
   ['.ts', '.js'],
   ['.jsx', '.js']
 ]);
 
 const CWT_MARKER = '/// <template type="cwt" />';
-
-function wrap(sourceCode) {
-  if (sourceCode.indexOf(CWT_MARKER) !== -1) {
-    sourceCode = `<%\n${sourceCode}\n%>\n`;
+const TRANSPILE_OPTIONS = {
+  compilerOptions: {
+    module: ts.ModuleKind.ES2015,
+    target: ts.ScriptTarget.ES5,
   }
+};
 
-  return `\ufeff${sourceCode}`;
+export function addbom(s) {
+  return `\ufeff${s}`;
 }
 
-function prepare(sourceCode) {
+export function wrap(code) {
+  if (code.indexOf(CWT_MARKER) !== -1) {
+    code = `<%\n${code}\n%>\n`;
+  }
+
+  return addbom(code);
+}
+
+export function prepare(code) {
   function visitor(node) {
     if (ts.isExportDeclaration(node) || ts.isImportDeclaration(node)) {
       ts.addSyntheticLeadingComment(node, ts.SyntaxKind.MissingDeclaration, '', false);
@@ -51,24 +61,18 @@ function prepare(sourceCode) {
     return ts.visitEachChild(node, visitor);
   }
 
-  const sourceFile = ts.createSourceFile('', sourceCode, ts.ScriptTarget.ES5, true);
+  const sourceFile = ts.createSourceFile('', code, ts.ScriptTarget.ES5, true);
   const result = ts.transform(sourceFile, [() => rootNode => ts.visitNode(rootNode, visitor)]);
   const printer = ts.createPrinter();
   return printer.printFile(result.transformed[0]);
 }
 
-function pare(sourceCode) {
-  const { outputText } = ts.transpileModule(
-    sourceCode,
-    {
-      compilerOptions: { module: ts.ModuleKind.ES2015, target: ts.ScriptTarget.ES5 }
-    }
-  );
-
+export function pare(code) {
+  const { outputText } = ts.transpileModule(code, TRANSPILE_OPTIONS);
   return outputText;
 }
 
-function afterpare(sourceCode) {
+export function afterpare(code) {
   function visitor(node) {
     if (ts.isForInStatement(node)) {
       if (ts.isVariableDeclarationList(node.initializer) && node.initializer.declarations.length > 0) {
@@ -77,19 +81,10 @@ function afterpare(sourceCode) {
 
         const newVariableStatement = ts.factory.createVariableStatement(
           undefined,
-          ts.factory.createVariableDeclarationList(
-            [ts.factory.createVariableDeclaration(variableName)],
-            ts.NodeFlags.Let
-          )
+          ts.factory.createVariableDeclarationList([ts.factory.createVariableDeclaration(variableName)], ts.NodeFlags.None)
         );
 
-        const newForInLoop = ts.factory.updateForInStatement(
-          node,
-          variableName,
-          node.expression,
-          node.statement
-        );
-
+        const newForInLoop = ts.factory.updateForInStatement(node, variableName, node.expression, node.statement);
         return [newVariableStatement, newForInLoop];
       }
     }
@@ -97,33 +92,26 @@ function afterpare(sourceCode) {
     return ts.visitEachChild(node, visitor);
   }
 
-  const sourceFile = ts.createSourceFile('', sourceCode, ts.ScriptTarget.ES5, true);
+  const sourceFile = ts.createSourceFile('', code, ts.ScriptTarget.ES5, true);
   const result = ts.transform(sourceFile, [() => rootNode => ts.visitNode(rootNode, visitor)]);
   const printer = ts.createPrinter();
   return printer.printFile(result.transformed[0]);
 }
 
-async function transmute(ctx, outputPathParsed) {
-  if (!existsSync(outputPathParsed.dir)) {
-    mkdirSync(outputPathParsed.dir, { recursive: true });
+export async function transmute(ctx) {
+  let code = await ctx.read();
+
+  if (EXTS_TO_TRANSFORM.indexOf(extname(ctx.file)) !== -1) {
+    code = prepare(code);
+    code = pare(code);
+    code = afterpare(code);
+    code = wrap(code);
   }
 
-  let sourceCode = await ctx.read();
-
-  if (extsToTransform.indexOf(extname(ctx.file)) !== -1) {
-    sourceCode = prepare(sourceCode);
-    sourceCode = pare(sourceCode);
-    sourceCode = afterpare(sourceCode);
-    sourceCode = wrap(sourceCode);
-  }
-
-  writeFileSync(
-    join(outputPathParsed.dir, `${outputPathParsed.name}${extsMapping.get(outputPathParsed.ext) ?? outputPathParsed.ext}`),
-    sourceCode
-  );
+  return code;
 }
 
-export default function wshcmBuilder(config) {
+export default async function wshcmBuilder(config) {
   return {
     name: PLUGIN_NAME,
     async handleHotUpdate(ctx) {
@@ -135,10 +123,14 @@ export default function wshcmBuilder(config) {
       }
 
       const outputPath = join(config.output, relativePath);
-      const outputPathParsed = parse(outputPath);
+      const { dir, name, ext } = parse(outputPath);
 
       try {
-        transmute(ctx, outputPathParsed);
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true });
+        }
+
+        writeFileSync(join(dir, `${name}${EXTS_MAPPING.get(ext) ?? ext}`), await transmute(ctx));
         console.log(`✅ ${new Date().toLocaleString()} File "${basename(ctx.file)}" successfully transformed and saved in the "${outputRelative}" folder`);
       } catch (error) {
         console.error(`🛑 Error occurred in plugin ${PLUGIN_NAME}\n`, error);
