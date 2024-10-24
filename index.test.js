@@ -1,6 +1,7 @@
-import { describe, it } from 'node:test';
-import { wrap, prepare, pare, afterpare, transmute } from './index.js';
+import { mock, describe, it } from 'node:test';
+import { wrap, prepare, pare, afterpare, transmute, convertFilename } from './index.js';
 import assert from 'node:assert';
+import { resolve } from 'node:path';
 
 describe('vite-plugin-wshcm suite', () => {
   const TEMPLATE_DEFAULT_VALUES = `/// <template type="cwt" />
@@ -19,6 +20,16 @@ function sumWithC(a: number = 1, b: number = 10) {
 for (key in array) {
   alert(key);
 }
+`;
+
+  const IMPORT_EXPORT_CODE = `import { something } from 'somehwere';
+function decorateSomethingWithAnArgument(argument: Object) {
+    return something(Object) + "decorate";
+}
+
+export {
+  decorateSomethingWithAnArgument
+};
 `;
 
   it('Test wrap', () => {
@@ -69,6 +80,16 @@ for (key in array) {
     assert.strictEqual(afterpare(pare(prepare(FOR_IN_LOOP_CODE))), expected);
   });
 
+  it('Test afterpare import export', () => {
+    const expected = `// import { something } from 'somehwere';
+function decorateSomethingWithAnArgument(argument) {
+    return something(Object) + "decorate";
+}
+// export { decorateSomethingWithAnArgument };
+`;
+    assert.strictEqual(afterpare(pare(prepare(IMPORT_EXPORT_CODE))), expected);
+  });
+
   it('Test transmute', async() => {
     const ctx = {
       file: 'index.tsx',
@@ -84,5 +105,56 @@ for (key in array) {
 `;
 
     assert.strictEqual(await transmute(ctx), `\ufeff${expected}`);
+  });
+
+  it('Test plugin wshcm itself', async () => {
+    const ctx = {
+      async read() {
+        return TEMPLATE_DEFAULT_VALUES;
+      },
+      file: 'dummy_file.ts',
+      server: {
+        config: {
+          root: import.meta.dirname
+        }
+      }
+    };
+
+    const config = {
+      output: resolve(import.meta.dirname, 'testdata', 'dummy_output_path')
+    };
+
+    const expected = `\ufeff<%
+/// <template type="cwt" />
+function sumWithC(a, b) {
+    if (a === void 0) {
+        a = 1;
+    }
+    if (b === void 0) {
+        b = 10;
+    }
+    var c = a + b;
+    return c;
+}
+
+%>
+`;
+
+    const fsMock = mock.module('node:fs', {
+      namedExports: {
+        existsSync: () => true,
+        mkdirSync() { },
+        writeFileSync(path, content) {
+          assert.equal(path, resolve(config.output, convertFilename(ctx.file)));
+          assert.equal(content, expected);
+        }
+      }
+    });
+
+    const wshcm = await import(`./index.js?${Date.now()}`);
+    const plugin = await wshcm.default(config);
+    assert.equal(plugin.name, 'vite-plugin-wshcm');
+    await plugin.handleHotUpdate(ctx);
+    fsMock.restore();
   });
 });

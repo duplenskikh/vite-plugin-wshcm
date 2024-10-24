@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { parse, join, relative, basename, extname } from 'path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { parse, join, relative, basename, extname } from 'node:path';
 import ts from 'typescript';
 
 const PLUGIN_NAME = 'vite-plugin-wshcm';
@@ -133,6 +133,11 @@ export async function transmute(ctx) {
   return code;
 }
 
+export function convertFilename(basename) {
+  const { name, ext } = parse(basename);
+  return `${name}${EXTS_MAPPING.get(ext) ?? ext}`
+}
+
 /**
  * Плагин
  * @param {import('.').WSHCMConfiguration} config - Конфигурация плагина
@@ -155,14 +160,14 @@ export default async function wshcm(config) {
       }
 
       const outputPath = join(config.output, relativePath);
-      const { dir, name, ext } = parse(outputPath);
+      const { dir, base } = parse(outputPath);
 
       try {
         if (!existsSync(dir)) {
           mkdirSync(dir, { recursive: true });
         }
 
-        writeFileSync(join(dir, `${name}${EXTS_MAPPING.get(ext) ?? ext}`), await transmute(ctx));
+        writeFileSync(join(dir, convertFilename(base)), await transmute(ctx));
         console.log(`✅ ${new Date().toLocaleString()} File "${basename(ctx.file)}" successfully transformed and saved in the "${outputRelative}" folder`);
       } catch (error) {
         console.error(`🛑 Error occurred in plugin ${PLUGIN_NAME}\n`, error);
