@@ -154,8 +154,9 @@ export default async function wshcm(config) {
     async handleHotUpdate(ctx) {
       const relativePath = relative(ctx.server.config.root, ctx.file);
       const outputRelative = relative(ctx.server.config.root, config.output);
+      const srcRelative = relative(ctx.server.config.root, config.src);
 
-      if (relativePath.startsWith(outputRelative)) {
+      if (relativePath.startsWith(outputRelative) || !relativePath.startsWith(srcRelative)) {
         return;
       }
 

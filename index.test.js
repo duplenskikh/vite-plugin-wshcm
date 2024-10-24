@@ -121,7 +121,8 @@ for (key in array) {
     };
 
     const config = {
-      output: resolve(import.meta.dirname, 'testdata', 'dummy_output_path')
+      src: resolve(import.meta.dirname, 'testdata', 'dummy_src_path'),
+      output: resolve(import.meta.dirname, 'testdata', 'dummy_output_path'),
     };
 
     const expected = `\ufeff<%

@@ -2,7 +2,7 @@ import { HmrContext } from "vite";
 
 export interface WSHCMConfiguration {
   src: string;
-  out: string;
+  output: string;
 }
 
 declare module '@umbrik/vite-plugin-wshcm' {
