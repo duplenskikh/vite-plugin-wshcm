@@ -14,7 +14,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
+      - run: npm install
+      - name: Check for changes after npm i
+        run: "[[ `git status --porcelain` ]] && exit 1 || exit 0"
       - run: npm test
       - name: Setup LCOV
         uses: hrishikesh-kadam/setup-lcov@v1

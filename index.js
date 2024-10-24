@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { parse, join, relative, basename, extname } from 'path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { parse, join, relative, basename, extname } from 'node:path';
 import ts from 'typescript';
 
 const PLUGIN_NAME = 'vite-plugin-wshcm';
@@ -18,18 +18,25 @@ const TRANSPILE_OPTIONS = {
   }
 };
 
-export function addbom(s) {
-  return `\ufeff${s}`;
-}
-
+/**
+ * Метод для оборачивания исходного кода в теги <% %>, если имеется маркер в файле.
+ * И добавлени bom метки
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function wrap(code) {
   if (code.indexOf(CWT_MARKER) !== -1) {
     code = `<%\n${code}\n%>\n`;
   }
 
-  return addbom(code);
+  return `\ufeff${code}`;
 }
 
+/**
+ * Подготовка кода перед транспиляцией
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function prepare(code) {
   function visitor(node) {
     if (ts.isExportDeclaration(node) || ts.isImportDeclaration(node)) {
@@ -67,11 +74,21 @@ export function prepare(code) {
   return printer.printFile(result.transformed[0]);
 }
 
+/**
+ * Транспиляция кода
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function pare(code) {
   const { outputText } = ts.transpileModule(code, TRANSPILE_OPTIONS);
   return outputText;
 }
 
+/**
+ * Правка кода после транспиляции
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function afterpare(code) {
   function visitor(node) {
     if (ts.isForInStatement(node)) {
@@ -98,6 +115,11 @@ export function afterpare(code) {
   return printer.printFile(result.transformed[0]);
 }
 
+/**
+ * Обработка кода и возвращение в формате WSHCM
+ * @param {import('vite').HmrContext} ctx - Контекст плагина
+ * @returns 
+ */
 export async function transmute(ctx) {
   let code = await ctx.read();
 
@@ -111,9 +133,24 @@ export async function transmute(ctx) {
   return code;
 }
 
+export function convertFilename(basename) {
+  const { name, ext } = parse(basename);
+  return `${name}${EXTS_MAPPING.get(ext) ?? ext}`
+}
+
+/**
+ * Плагин
+ * @param {import('.').WSHCMConfiguration} config - Конфигурация плагина
+ * @returns {Promise<void>}
+ */
 export default async function wshcm(config) {
   return {
     name: PLUGIN_NAME,
+    /**
+     * 
+     * @param {import('vite').HmrContext} ctx - Контекст плагина
+     * @returns {Promise<void>}
+     */
     async handleHotUpdate(ctx) {
       const relativePath = relative(ctx.server.config.root, ctx.file);
       const outputRelative = relative(ctx.server.config.root, config.output);
@@ -123,14 +160,14 @@ export default async function wshcm(config) {
       }
 
       const outputPath = join(config.output, relativePath);
-      const { dir, name, ext } = parse(outputPath);
+      const { dir, base } = parse(outputPath);
 
       try {
         if (!existsSync(dir)) {
           mkdirSync(dir, { recursive: true });
         }
 
-        writeFileSync(join(dir, `${name}${EXTS_MAPPING.get(ext) ?? ext}`), await transmute(ctx));
+        writeFileSync(join(dir, convertFilename(base)), await transmute(ctx));
         console.log(`✅ ${new Date().toLocaleString()} File "${basename(ctx.file)}" successfully transformed and saved in the "${outputRelative}" folder`);
       } catch (error) {
         console.error(`🛑 Error occurred in plugin ${PLUGIN_NAME}\n`, error);
