@@ -1,6 +1,12 @@
-declare module 'vite-plugin-wshcm' {
-  export function wshcm(config: { output: string }): {
+import { HmrContext } from "vite";
+
+export interface WSHCMConfiguration {
+  output: string;
+}
+
+declare module '@umbrik/vite-plugin-wshcm' {
+  export default function wshcm(config: WSHCMConfiguration): {
     name: string;
-    handleHotUpdate(): void;
+    handleHotUpdate(ctx: HmrContext): Promise<void>;
   };
 }

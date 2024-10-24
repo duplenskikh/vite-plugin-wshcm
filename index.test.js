@@ -1,5 +1,5 @@
 import { describe, it } from 'node:test';
-import { addbom, wrap, prepare, pare, afterpare, transmute } from './index.js';
+import { wrap, prepare, pare, afterpare, transmute } from './index.js';
 import assert from 'node:assert';
 
 describe('vite-plugin-wshcm suite', () => {
@@ -21,13 +21,8 @@ for (key in array) {
 }
 `;
 
-  it('Test bom', () => {
-    const s = '\x00somestring';
-    assert.strictEqual(addbom(s), '\ufeff' + s);
-  });
-
   it('Test wrap', () => {
-    assert.strictEqual(wrap(TEMPLATE_DEFAULT_VALUES), addbom(`<%\n${TEMPLATE_DEFAULT_VALUES}\n%>\n`));
+    assert.strictEqual(wrap(TEMPLATE_DEFAULT_VALUES), `\ufeff<%\n${TEMPLATE_DEFAULT_VALUES}\n%>\n`);
   });
 
   it('Test prepare default values', () => {
@@ -88,6 +83,6 @@ for (key in array) {
 }
 `;
 
-    assert.strictEqual(await transmute(ctx), addbom(expected));
+    assert.strictEqual(await transmute(ctx), `\ufeff${expected}`);
   });
 });

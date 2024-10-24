@@ -18,18 +18,25 @@ const TRANSPILE_OPTIONS = {
   }
 };
 
-export function addbom(s) {
-  return `\ufeff${s}`;
-}
-
+/**
+ * Метод для оборачивания исходного кода в теги <% %>, если имеется маркер в файле.
+ * И добавлени bom метки
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function wrap(code) {
   if (code.indexOf(CWT_MARKER) !== -1) {
     code = `<%\n${code}\n%>\n`;
   }
 
-  return addbom(code);
+  return `\ufeff${code}`;
 }
 
+/**
+ * Подготовка кода перед транспиляцией
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function prepare(code) {
   function visitor(node) {
     if (ts.isExportDeclaration(node) || ts.isImportDeclaration(node)) {
@@ -67,11 +74,21 @@ export function prepare(code) {
   return printer.printFile(result.transformed[0]);
 }
 
+/**
+ * Транспиляция кода
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function pare(code) {
   const { outputText } = ts.transpileModule(code, TRANSPILE_OPTIONS);
   return outputText;
 }
 
+/**
+ * Правка кода после транспиляции
+ * @param {string} code - Исходный код
+ * @returns {string}
+ */
 export function afterpare(code) {
   function visitor(node) {
     if (ts.isForInStatement(node)) {
@@ -98,6 +115,11 @@ export function afterpare(code) {
   return printer.printFile(result.transformed[0]);
 }
 
+/**
+ * Обработка кода и возвращение в формате WSHCM
+ * @param {import('vite').HmrContext} ctx - Контекст плагина
+ * @returns 
+ */
 export async function transmute(ctx) {
   let code = await ctx.read();
 
@@ -111,9 +133,19 @@ export async function transmute(ctx) {
   return code;
 }
 
+/**
+ * Плагин
+ * @param {import('.').WSHCMConfiguration} config - Конфигурация плагина
+ * @returns {Promise<void>}
+ */
 export default async function wshcm(config) {
   return {
     name: PLUGIN_NAME,
+    /**
+     * 
+     * @param {import('vite').HmrContext} ctx - Контекст плагина
+     * @returns {Promise<void>}
+     */
     async handleHotUpdate(ctx) {
       const relativePath = relative(ctx.server.config.root, ctx.file);
       const outputRelative = relative(ctx.server.config.root, config.output);
